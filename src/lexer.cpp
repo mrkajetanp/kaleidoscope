@@ -18,14 +18,7 @@ std::vector<Token> tokenize(const llvm::MemoryBuffer *buffer) {
       while (std::isalnum(*pos))
         identifier += *pos++;
 
-      // Handle keywords
-      if (identifier == "def")
-        result.push_back(Token{TokenKind::Def});
-      else if (identifier == "extern")
-        result.push_back(Token{TokenKind::Extern});
-      else
-        result.push_back(
-            Token{TokenKind::Identifier, OptionalTokenData(identifier)});
+      result.push_back(Token(identifier));
     }
 
     // Handle numbers
@@ -46,5 +39,38 @@ std::vector<Token> tokenize(const llvm::MemoryBuffer *buffer) {
     }
   }
 
+  return result;
+}
+
+Token::Token(std::string str) {
+  this->data = std::nullopt;
+
+  if (str == "def")
+    this->kind = TokenKind::Def;
+  else if (str == "extern")
+    this->kind = TokenKind::Extern;
+  else {
+    this->kind = TokenKind::Identifier;
+    this->data = OptionalTokenData(str);
+  }
+}
+
+std::string Token::format() {
+  std::string result;
+  switch (this->kind) {
+  case TokenKind::Def:
+    result = "Def";
+    break;
+  case TokenKind::Extern:
+    result = "Extern";
+    break;
+  case TokenKind::Identifier:
+    result = "Identifier(" + std::get<std::string>(this->data.value()) + ")";
+    break;
+  case TokenKind::Number:
+    result =
+        "Number(" + std::to_string(std::get<double>(this->data.value())) + ")";
+    break;
+  }
   return result;
 }
