@@ -8,9 +8,18 @@
 #include <vector>
 
 enum class TokenKind {
+  // Symbols
+  ParenOpen,
+  ParenClose,
+  LessThan,
+  Minus,
+  Plus,
   // Keywords
   Def,
   Extern,
+  If,
+  Then,
+  Else,
   // Primary
   Identifier,
   Number,
@@ -28,8 +37,11 @@ public:
   Token(std::string str);
 
   std::string format();
+  static std::optional<Token> from_symbol(char symbol);
 };
 
-std::vector<Token> tokenize(const llvm::MemoryBuffer *buffer);
+using TokenizeResult = std::variant<std::vector<Token>, std::string>;
+
+TokenizeResult tokenize(const llvm::MemoryBuffer *buffer);
 
 #endif // LEXER_HPP_
