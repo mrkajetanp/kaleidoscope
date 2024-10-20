@@ -1,5 +1,5 @@
-#ifndef LEXER_HPP_
-#define LEXER_HPP_
+#ifndef LEXER_H_
+#define LEXER_H_
 
 #include "llvm/Support/MemoryBuffer.h"
 #include <optional>
@@ -44,4 +44,4 @@ using TokenizeResult = std::variant<std::vector<Token>, std::string>;
 
 TokenizeResult tokenize(const llvm::MemoryBuffer *buffer);
 
-#endif // LEXER_HPP_
+#endif // LEXER_H_
