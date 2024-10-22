@@ -1,6 +1,8 @@
 #ifndef AST_H_
 #define AST_H_
 
+#include "lexer.hpp"
+#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -31,6 +33,8 @@ enum class OperatorKind {
   Minus,
   LessThan,
   GreaterThan,
+  Asterisk,
+  Invalid,
 };
 
 class BinaryExpr : public Expr {

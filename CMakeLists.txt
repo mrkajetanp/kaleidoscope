@@ -25,13 +25,10 @@ llvm_map_components_to_libnames(llvm_libs support core irreader)
 
 # Libraries
 
-find_package(matchit CONFIG REQUIRED)
-
 # Executable setup
 
-add_executable(${TARGET_NAME} src/main.cpp src/lexer.cpp)
+add_executable(${TARGET_NAME} src/main.cpp src/lexer.cpp src/parser.cpp)
 
 target_compile_features(${TARGET_NAME} PUBLIC cxx_std_23)
 
 target_link_libraries(${TARGET_NAME} PUBLIC ${llvm_libs})
-target_link_libraries(${TARGET_NAME} PRIVATE matchit::matchit)

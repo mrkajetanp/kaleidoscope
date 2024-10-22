@@ -14,6 +14,8 @@ enum class TokenKind {
   LessThan,
   Minus,
   Plus,
+  Asterisk,
+  Comma,
   // Keywords
   Def,
   Extern,
@@ -38,6 +40,10 @@ public:
 
   std::string format();
   static std::optional<Token> from_symbol(char symbol);
+
+  TokenKind getKind() { return this->kind; }
+  OptionalTokenData &getData() { return this->data; }
+  int precedence();
 };
 
 using TokenizeResult = std::variant<std::vector<Token>, std::string>;

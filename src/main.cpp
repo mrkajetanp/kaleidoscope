@@ -1,8 +1,11 @@
 #include "lexer.hpp"
+#include "parser.hpp"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
+#include <deque>
 #include <iostream>
+#include <iterator>
 #include <memory>
 #include <print>
 #include <variant>
@@ -21,8 +24,11 @@ int compile(const llvm::MemoryBuffer *buf) {
                std::get<std::string>(lexer_result));
     return 1;
   }
-  auto tokens = std::get<std::vector<Token>>(lexer_result);
-  std::println("tokens: {}", tokens.size());
+  auto tokens_vec = std::get<std::vector<Token>>(lexer_result);
+  std::println("tokens: {}", tokens_vec.size());
+
+  std::deque<Token> tokens;
+  std::move(tokens_vec.begin(), tokens_vec.end(), std::back_inserter(tokens));
 
   for (Token &token : tokens) {
     std::print("{} ", token.format());
@@ -30,6 +36,10 @@ int compile(const llvm::MemoryBuffer *buf) {
   std::println();
 
   // Parser
+  auto ast = parser::parse(tokens);
+  for (auto &fn : ast)
+    std::println("got function");
+
   return 0;
 }
 

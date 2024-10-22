@@ -1,8 +1,3 @@
-def fib(x)
-  # some comment here
-  if x < 3 then
-    1
-  else
-    fib(x-1)+fib(x-2)
+def foo(a b) a*a + 2*a*b + b*b
 
-fib(40)
+5+8

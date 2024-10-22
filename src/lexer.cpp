@@ -1,8 +1,10 @@
 #include "lexer.hpp"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cctype>
+#include <iostream>
 #include <print>
 
+// TODO: make this return a deque
 TokenizeResult tokenize(const llvm::MemoryBuffer *buffer) {
   std::vector<Token> result{};
 
@@ -99,10 +101,31 @@ std::optional<Token> Token::from_symbol(char symbol) {
     return Token(TokenKind::Plus);
   case '-':
     return Token(TokenKind::Minus);
+  case '*':
+    return Token(TokenKind::Asterisk);
+  case ',':
+    return Token(TokenKind::Comma);
   default:
     return std::nullopt;
   }
 }
+
+#define TOKEN_PRECEDENCE_CASE(kind, precedence)                                \
+  case TokenKind::kind:                                                        \
+    return precedence;
+
+int Token::precedence() {
+  switch (this->kind) {
+    TOKEN_PRECEDENCE_CASE(LessThan, 10);
+    TOKEN_PRECEDENCE_CASE(Plus, 20);
+    TOKEN_PRECEDENCE_CASE(Minus, 20);
+    TOKEN_PRECEDENCE_CASE(Asterisk, 40);
+  default:
+    return -1;
+  }
+}
+
+#undef TOKEN_PRECEDENCE_CASE
 
 #define TOKEN_FORMAT_CASE(kind)                                                \
   case TokenKind::kind:                                                        \
@@ -117,6 +140,8 @@ std::string Token::format() {
     TOKEN_FORMAT_CASE(LessThan)
     TOKEN_FORMAT_CASE(Minus)
     TOKEN_FORMAT_CASE(Plus)
+    TOKEN_FORMAT_CASE(Asterisk)
+    TOKEN_FORMAT_CASE(Comma)
     TOKEN_FORMAT_CASE(Def)
     TOKEN_FORMAT_CASE(Extern)
     TOKEN_FORMAT_CASE(If)
