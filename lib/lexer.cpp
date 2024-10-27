@@ -1,7 +1,6 @@
 #include "lexer.hpp"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cctype>
-#include <iostream>
 #include <print>
 
 // TODO: make this return a deque

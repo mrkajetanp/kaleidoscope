@@ -1,3 +1,3 @@
-def foo(a b) a*a + 2*a*b + b*b
+def foo(a, b) a*a + 2*a*b + b*b
 
-5+8
+foo(5, 2)

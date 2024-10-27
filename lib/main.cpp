@@ -1,5 +1,6 @@
+#include "ast/parser.hpp"
+#include "ast/printer.hpp"
 #include "lexer.hpp"
-#include "parser.hpp"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
@@ -9,7 +10,6 @@
 #include <memory>
 #include <print>
 #include <variant>
-
 std::unique_ptr<llvm::MemoryBuffer> read_file(std::string filepath) {
   using FileOrError = llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>;
   FileOrError result = llvm::MemoryBuffer::getFileOrSTDIN(filepath);
@@ -18,6 +18,7 @@ std::unique_ptr<llvm::MemoryBuffer> read_file(std::string filepath) {
 
 int compile(const llvm::MemoryBuffer *buf) {
   // Lexer
+  std::println("*** Source ***\n\n{}", buf->getBuffer().str());
   auto lexer_result = tokenize(buf);
   if (std::holds_alternative<std::string>(lexer_result)) {
     std::print(std::cerr, "Lexer error: {}",
@@ -25,7 +26,7 @@ int compile(const llvm::MemoryBuffer *buf) {
     return 1;
   }
   auto tokens_vec = std::get<std::vector<Token>>(lexer_result);
-  std::println("tokens: {}", tokens_vec.size());
+  std::println("*** Tokens ***\n\n{}", tokens_vec.size());
 
   std::deque<Token> tokens;
   std::move(tokens_vec.begin(), tokens_vec.end(), std::back_inserter(tokens));
@@ -37,15 +38,16 @@ int compile(const llvm::MemoryBuffer *buf) {
 
   // Parser
   auto ast = parser::parse(tokens);
+  std::println("\n*** AST ***\n");
   for (auto &fn : ast)
-    std::println("got function");
+    std::println("{}\n", *fn);
 
   return 0;
 }
 
 int main() {
   std::string path = "samples/basic.k";
-  std::println("filepath is {}", path);
+  std::println("Filepath: {}", path);
   auto buffer = read_file(path);
   llvm::SourceMgr source_manager;
   auto id = source_manager.AddNewSourceBuffer(std::move(buffer), llvm::SMLoc());

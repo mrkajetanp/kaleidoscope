@@ -1,8 +1,7 @@
 #ifndef AST_H_
 #define AST_H_
 
-#include "lexer.hpp"
-#include <iostream>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -11,6 +10,7 @@ namespace ast {
 
 class Expr {
 public:
+  virtual std::string tree_format(uint32_t indent_level) = 0;
   virtual ~Expr() = default;
 };
 
@@ -19,6 +19,7 @@ class NumberExpr : public Expr {
 
 public:
   NumberExpr(double val) : val(val) {}
+  std::string tree_format(uint32_t indent_level) override;
 };
 
 class VariableExpr : public Expr {
@@ -26,6 +27,7 @@ class VariableExpr : public Expr {
 
 public:
   VariableExpr(const std::string &name) : name(name) {}
+  std::string tree_format(uint32_t indent_level) override;
 };
 
 enum class OperatorKind {
@@ -46,6 +48,8 @@ public:
   BinaryExpr(OperatorKind op, std::unique_ptr<Expr> left,
              std::unique_ptr<Expr> right)
       : op(op), left(std::move(left)), right(std::move(right)) {}
+
+  std::string tree_format(uint32_t indent_level) override;
 };
 
 class CallExpr : public Expr {
@@ -55,13 +59,14 @@ class CallExpr : public Expr {
 public:
   CallExpr(const std::string &callee, std::vector<std::unique_ptr<Expr>> args)
       : callee(callee), args(std::move(args)) {}
+  std::string tree_format(uint32_t indent_level) override;
 };
 
 class FunctionPrototype {
+public:
   std::string name;
   std::vector<std::string> args;
 
-public:
   FunctionPrototype(const std::string &name, std::vector<std::string> args)
       : name(name), args(std::move(args)) {}
 
@@ -69,15 +74,14 @@ public:
 };
 
 class FunctionDefinition {
+public:
   std::unique_ptr<FunctionPrototype> proto;
   std::unique_ptr<Expr> body;
 
-public:
   FunctionDefinition(std::unique_ptr<FunctionPrototype> proto,
                      std::unique_ptr<Expr> body)
       : proto(std::move(proto)), body(std::move(body)) {}
 };
-
 } // namespace ast
 
 #endif // AST_H_

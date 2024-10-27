@@ -27,7 +27,7 @@ llvm_map_components_to_libnames(llvm_libs support core irreader)
 
 # Executable setup
 
-add_executable(${TARGET_NAME} src/main.cpp src/lexer.cpp src/parser.cpp)
+add_executable(${TARGET_NAME} lib/main.cpp lib/lexer.cpp lib/ast/parser.cpp lib/ast/printer.cpp)
 
 target_compile_features(${TARGET_NAME} PUBLIC cxx_std_23)
 

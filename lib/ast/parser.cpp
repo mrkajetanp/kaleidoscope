@@ -1,5 +1,5 @@
-#include "parser.hpp"
-#include "ast.hpp"
+#include "ast/parser.hpp"
+#include "ast/ast.hpp"
 #include "lexer.hpp"
 #include <iostream>
 #include <memory>
@@ -77,6 +77,7 @@ parseIdentifierExpr(std::deque<Token> &tokens) {
 
   // Function call
   tokens.pop_front();
+  std::println("parsing function call here");
   token = tokens.front();
   std::vector<std::unique_ptr<ast::Expr>> args;
   if (token.getKind() != TokenKind::ParenClose) {
@@ -188,6 +189,9 @@ parseFunctionPrototype(std::deque<Token> &tokens) {
   while (token.getKind() == TokenKind::Identifier) {
     argNames.push_back(std::get<std::string>(*token.getData()));
     tokens.pop_front();
+    if (tokens.front().getKind() == TokenKind::Comma) {
+      tokens.pop_front();
+    }
     token = tokens.front();
   }
 
