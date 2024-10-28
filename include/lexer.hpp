@@ -2,10 +2,10 @@
 #define LEXER_H_
 
 #include "llvm/Support/MemoryBuffer.h"
+#include <deque>
 #include <optional>
 #include <string>
 #include <variant>
-#include <vector>
 
 enum class TokenKind {
   // Symbols
@@ -46,7 +46,7 @@ public:
   int precedence();
 };
 
-using TokenizeResult = std::variant<std::vector<Token>, std::string>;
+using TokenizeResult = std::variant<std::deque<Token>, std::string>;
 
 TokenizeResult tokenize(const llvm::MemoryBuffer *buffer);
 

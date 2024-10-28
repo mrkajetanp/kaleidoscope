@@ -7,7 +7,7 @@
 
 namespace parser {
 
-std::vector<std::unique_ptr<ast::FunctionDefinition>> parse(std::deque<Token> &tokens);
+ast::CompilationUnit parse(std::deque<Token> &tokens);
 
 }
 

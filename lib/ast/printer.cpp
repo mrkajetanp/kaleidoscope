@@ -22,7 +22,6 @@ std::string ast::CallExpr::tree_format(uint32_t indent_level) {
   std::string indent = "";
   for (int i = 0; i < indent_level; ++i)
     indent += INDENT;
-  // TODO: include arguments
   std::stringstream result;
   result << indent << "CallExpr" << '\n';
   indent += INDENT;

@@ -51,6 +51,16 @@ template <> struct std::formatter<ast::FunctionDefinition> {
   }
 };
 
+template <> struct std::formatter<ast::CompilationUnit> {
+  constexpr auto parse(std::format_parse_context &ctx) { return ctx.begin(); }
+  auto format(const ast::CompilationUnit &cu, std::format_context &ctx) const {
+    std::format_to(ctx.out(), "CompilationUnit\n\n");
+    for (auto &fn : cu.functions)
+      std::format_to(ctx.out(), "{}\n", *fn);
+    return std::format_to(ctx.out(), "");
+  }
+};
+
 #define OP_KIND_FORMAT_CASE(name, symbol)                                      \
   case ast::OperatorKind::name:                                                \
     result = symbol;                                                           \
@@ -66,7 +76,6 @@ template <> struct std::formatter<ast::OperatorKind> {
       OP_KIND_FORMAT_CASE(Asterisk, "*")
       OP_KIND_FORMAT_CASE(LessThan, "<")
       OP_KIND_FORMAT_CASE(GreaterThan, "<")
-      OP_KIND_FORMAT_CASE(Invalid, "<Inv>")
     }
     return std::format_to(ctx.out(), "{}", result);
   }

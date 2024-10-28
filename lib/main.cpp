@@ -6,10 +6,10 @@
 #include "llvm/Support/SourceMgr.h"
 #include <deque>
 #include <iostream>
-#include <iterator>
 #include <memory>
 #include <print>
 #include <variant>
+
 std::unique_ptr<llvm::MemoryBuffer> read_file(std::string filepath) {
   using FileOrError = llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>;
   FileOrError result = llvm::MemoryBuffer::getFileOrSTDIN(filepath);
@@ -25,11 +25,8 @@ int compile(const llvm::MemoryBuffer *buf) {
                std::get<std::string>(lexer_result));
     return 1;
   }
-  auto tokens_vec = std::get<std::vector<Token>>(lexer_result);
-  std::println("*** Tokens ***\n\n{}", tokens_vec.size());
-
-  std::deque<Token> tokens;
-  std::move(tokens_vec.begin(), tokens_vec.end(), std::back_inserter(tokens));
+  auto tokens = std::get<std::deque<Token>>(lexer_result);
+  std::println("*** Tokens ***\n\n{}", tokens.size());
 
   for (Token &token : tokens) {
     std::print("{} ", token.format());
@@ -39,8 +36,7 @@ int compile(const llvm::MemoryBuffer *buf) {
   // Parser
   auto ast = parser::parse(tokens);
   std::println("\n*** AST ***\n");
-  for (auto &fn : ast)
-    std::println("{}\n", *fn);
+  std::println("{}", ast);
 
   return 0;
 }

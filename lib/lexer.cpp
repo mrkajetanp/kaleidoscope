@@ -3,9 +3,8 @@
 #include <cctype>
 #include <print>
 
-// TODO: make this return a deque
 TokenizeResult tokenize(const llvm::MemoryBuffer *buffer) {
-  std::vector<Token> result{};
+  std::deque<Token> result{};
 
   char *pos = (char *)buffer->getBufferStart();
   const char *end = buffer->getBufferEnd();
@@ -61,7 +60,6 @@ TokenizeResult tokenize(const llvm::MemoryBuffer *buffer) {
       continue;
     }
 
-    // TODO: use std::variant, exceptions bad
     if (!std::isspace(*pos))
       return std::format("Could not tokenize '{}'", *pos);
   }

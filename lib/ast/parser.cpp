@@ -20,24 +20,22 @@ static std::unique_ptr<ast::FunctionDefinition>
 parseTopLevelExpr(std::deque<Token> &tokens);
 static std::unique_ptr<ast::FunctionPrototype>
 parseExtern(std::deque<Token> &tokens);
-ast::OperatorKind tokenToBinaryOperator(Token token);
+std::optional<ast::OperatorKind> tokenToBinaryOperator(Token token);
 
-// FIXME: this needs a compilation unit AST node
-std::vector<std::unique_ptr<ast::FunctionDefinition>>
-parse(std::deque<Token> &tokens) {
-  auto result = std::vector<std::unique_ptr<ast::FunctionDefinition>>();
+ast::CompilationUnit parse(std::deque<Token> &tokens) {
+  auto functions = std::vector<std::unique_ptr<ast::FunctionDefinition>>();
 
   while (tokens.size() > 0) {
     auto token = tokens.front();
     switch (token.getKind()) {
     case TokenKind::Def:
-      result.push_back(parseFunctionDefinition(tokens));
+      functions.push_back(parseFunctionDefinition(tokens));
       break;
     default:
-      result.push_back(parseTopLevelExpr(tokens));
+      functions.push_back(parseTopLevelExpr(tokens));
     }
   }
-  return result;
+  return ast::CompilationUnit(std::move(functions));
 }
 
 static std::unique_ptr<ast::Expr> parseNumberExpr(std::deque<Token> &tokens) {
@@ -148,9 +146,14 @@ parseBinOpRhs(std::deque<Token> &tokens, int precedence,
         return nullptr;
     }
 
+    auto binop = tokenToBinaryOperator(op);
+    if (!binop.has_value()) {
+      std::println(std::cerr, "Invalid binary operator {}", token.format());
+      return nullptr;
+    }
     // merge lhs & rhs
-    lhs = std::make_unique<ast::BinaryExpr>(tokenToBinaryOperator(op),
-                                            std::move(lhs), std::move(rhs));
+    lhs = std::make_unique<ast::BinaryExpr>(binop.value(), std::move(lhs),
+                                            std::move(rhs));
   }
 }
 
@@ -250,7 +253,7 @@ parseTopLevelExpr(std::deque<Token> &tokens) {
   case TokenKind::kind:                                                        \
     return ast::OperatorKind::kind;
 
-ast::OperatorKind tokenToBinaryOperator(Token token) {
+std::optional<ast::OperatorKind> tokenToBinaryOperator(Token token) {
   switch (token.getKind()) {
     TOKEN_BINOP_CASE(Plus)
     TOKEN_BINOP_CASE(Minus)
@@ -258,8 +261,7 @@ ast::OperatorKind tokenToBinaryOperator(Token token) {
     TOKEN_BINOP_CASE(LessThan)
   default:
     std::println(std::cerr, "Invalid binary operator {}", token.format());
-    // FIXME: my lord this must go
-    return ast::OperatorKind::Invalid;
+    return {};
   }
 }
 

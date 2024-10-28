@@ -36,7 +36,6 @@ enum class OperatorKind {
   LessThan,
   GreaterThan,
   Asterisk,
-  Invalid,
 };
 
 class BinaryExpr : public Expr {
@@ -82,6 +81,16 @@ public:
                      std::unique_ptr<Expr> body)
       : proto(std::move(proto)), body(std::move(body)) {}
 };
+
+class CompilationUnit {
+public:
+  std::vector<std::unique_ptr<ast::FunctionDefinition>> functions;
+
+  CompilationUnit(
+      std::vector<std::unique_ptr<ast::FunctionDefinition>> functions)
+      : functions(std::move(functions)) {}
+};
+
 } // namespace ast
 
 #endif // AST_H_
