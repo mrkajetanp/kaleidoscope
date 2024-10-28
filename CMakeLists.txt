@@ -25,6 +25,9 @@ llvm_map_components_to_libnames(llvm_libs support core irreader)
 
 # Libraries
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(easyloggingpp easyloggingpp REQUIRED IMPORTED_TARGET)
+
 # Executable setup
 
 add_executable(${TARGET_NAME} lib/main.cpp lib/lexer.cpp lib/ast/parser.cpp lib/ast/printer.cpp)
@@ -32,3 +35,4 @@ add_executable(${TARGET_NAME} lib/main.cpp lib/lexer.cpp lib/ast/parser.cpp lib/
 target_compile_features(${TARGET_NAME} PUBLIC cxx_std_23)
 
 target_link_libraries(${TARGET_NAME} PUBLIC ${llvm_libs})
+target_link_libraries(${TARGET_NAME} PRIVATE PkgConfig::easyloggingpp)

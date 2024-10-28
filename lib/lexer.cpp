@@ -1,4 +1,5 @@
 #include "lexer.hpp"
+#include "easylogging++.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cctype>
 #include <print>
@@ -16,13 +17,13 @@ TokenizeResult tokenize(const llvm::MemoryBuffer *buffer) {
     if (*pos == '\0')
       break;
 
-    // std::println("startpos {}", *pos);
+    VLOG(5) << "startpos " << *pos;
 
     // Handle symbols
     std::optional<Token> symbol_token = Token::from_symbol(*pos);
     if (symbol_token.has_value()) {
       result.push_back(symbol_token.value());
-      // std::println("adding {}", symbol_token.value().format());
+      VLOG(5) << std::format("adding {}", symbol_token.value());
       pos++;
       continue;
     }
@@ -35,7 +36,7 @@ TokenizeResult tokenize(const llvm::MemoryBuffer *buffer) {
         identifier += *pos++;
 
       result.push_back(Token(identifier));
-      // std::println("adding {}", identifier);
+      VLOG(5) << "adding " << identifier;
       continue;
     }
 
@@ -47,7 +48,7 @@ TokenizeResult tokenize(const llvm::MemoryBuffer *buffer) {
       } while (isdigit(*pos) || *pos == '.');
       double value = std::stod(number);
       result.push_back(Token{TokenKind::Number, OptionalTokenData(value)});
-      // std::println("adding {} pos {}", value, *pos);
+      VLOG(5) << "adding " << value << " pos " << *pos;
       continue;
     }
 
@@ -123,36 +124,3 @@ int Token::precedence() {
 }
 
 #undef TOKEN_PRECEDENCE_CASE
-
-#define TOKEN_FORMAT_CASE(kind)                                                \
-  case TokenKind::kind:                                                        \
-    result = #kind;                                                            \
-    break;
-
-std::string Token::format() {
-  std::string result;
-  switch (this->kind) {
-    TOKEN_FORMAT_CASE(ParenOpen)
-    TOKEN_FORMAT_CASE(ParenClose)
-    TOKEN_FORMAT_CASE(LessThan)
-    TOKEN_FORMAT_CASE(Minus)
-    TOKEN_FORMAT_CASE(Plus)
-    TOKEN_FORMAT_CASE(Asterisk)
-    TOKEN_FORMAT_CASE(Comma)
-    TOKEN_FORMAT_CASE(Def)
-    TOKEN_FORMAT_CASE(Extern)
-    TOKEN_FORMAT_CASE(If)
-    TOKEN_FORMAT_CASE(Then)
-    TOKEN_FORMAT_CASE(Else)
-  case TokenKind::Identifier:
-    result = "Identifier(" + std::get<std::string>(this->data.value()) + ")";
-    break;
-  case TokenKind::Number:
-    result =
-        "Number(" + std::to_string(std::get<double>(this->data.value())) + ")";
-    break;
-  }
-  return result;
-}
-
-#undef TOKEN_FORMAT_CASE

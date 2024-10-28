@@ -1,5 +1,6 @@
 #include "ast/parser.hpp"
 #include "ast/printer.hpp"
+#include "easylogging++.h"
 #include "lexer.hpp"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
@@ -10,6 +11,8 @@
 #include <print>
 #include <variant>
 
+INITIALIZE_EASYLOGGINGPP
+
 std::unique_ptr<llvm::MemoryBuffer> read_file(std::string filepath) {
   using FileOrError = llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>;
   FileOrError result = llvm::MemoryBuffer::getFileOrSTDIN(filepath);
@@ -18,32 +21,37 @@ std::unique_ptr<llvm::MemoryBuffer> read_file(std::string filepath) {
 
 int compile(const llvm::MemoryBuffer *buf) {
   // Lexer
-  std::println("*** Source ***\n\n{}", buf->getBuffer().str());
+  VLOG(1) << "*** Source ***";
+  VLOG(1) << '\n' << buf->getBuffer().str();
   auto lexer_result = tokenize(buf);
   if (std::holds_alternative<std::string>(lexer_result)) {
-    std::print(std::cerr, "Lexer error: {}",
-               std::get<std::string>(lexer_result));
+    LOG(ERROR) << "Lexer error: " << std::get<std::string>(lexer_result);
     return 1;
   }
   auto tokens = std::get<std::deque<Token>>(lexer_result);
-  std::println("*** Tokens ***\n\n{}", tokens.size());
+  VLOG(1) << "*** Tokens ***";
 
-  for (Token &token : tokens) {
-    std::print("{} ", token.format());
+  if (VLOG_IS_ON(1)) {
+    std::stringstream tokensLog;
+    for (Token &token : tokens) {
+      tokensLog << std::format("{} ", token);
+    }
+    VLOG(1) << tokensLog.str();
   }
-  std::println();
 
   // Parser
   auto ast = parser::parse(tokens);
-  std::println("\n*** AST ***\n");
-  std::println("{}", ast);
+  VLOG(1) << "*** AST ***";
+  VLOG(1) << '\n' << std::format("{}", ast);
 
   return 0;
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+  START_EASYLOGGINGPP(argc, argv);
+
   std::string path = "samples/basic.k";
-  std::println("Filepath: {}", path);
+  VLOG(2) << "Filepath: " << path;
   auto buffer = read_file(path);
   llvm::SourceMgr source_manager;
   auto id = source_manager.AddNewSourceBuffer(std::move(buffer), llvm::SMLoc());
