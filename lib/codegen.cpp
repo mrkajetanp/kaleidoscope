@@ -2,15 +2,35 @@
 #include "ast/ast.hpp"
 #include "easylogging++.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassInstrumentation.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/StandardInstrumentations.h"
+#include "llvm/Transforms/InstCombine/InstCombine.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Scalar/Reassociate.h"
+#include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include <map>
+#include <memory>
 
 static std::unique_ptr<llvm::LLVMContext> LLContext;
 static std::unique_ptr<llvm::IRBuilder<>> LLBuilder;
 static std::unique_ptr<llvm::Module> LLModule;
 static std::map<std::string, llvm::Value *> LLNamedValues;
+
+static std::unique_ptr<llvm::FunctionPassManager> LLFPM;
+static std::unique_ptr<llvm::LoopAnalysisManager> LLLAM;
+static std::unique_ptr<llvm::FunctionAnalysisManager> LLFAM;
+static std::unique_ptr<llvm::CGSCCAnalysisManager> LLCGAM;
+static std::unique_ptr<llvm::ModuleAnalysisManager> LLMAM;
+static std::unique_ptr<llvm::PassInstrumentationCallbacks> LLPIC;
+static std::unique_ptr<llvm::StandardInstrumentations> LLSI;
 
 llvm::Value *ast::NumberExpr::codegen() {
   return llvm::ConstantFP::get(*LLContext, llvm::APFloat(this->val));
@@ -116,8 +136,13 @@ llvm::Function *ast::FunctionDefinition::codegen() {
 
   if (llvm::Value *retVal = this->body->codegen()) {
     LLBuilder->CreateRet(retVal);
+
     // Validate generated code
     llvm::verifyFunction(*function);
+
+    // Optimise
+    LLFPM->run(*function, *LLFAM);
+
     return function;
   }
 
@@ -131,6 +156,28 @@ void codegen::codegen(ast::CompilationUnit *ast) {
   LLContext = std::make_unique<llvm::LLVMContext>();
   LLModule = std::make_unique<llvm::Module>("kaleidoscope-module", *LLContext);
   LLBuilder = std::make_unique<llvm::IRBuilder<>>(*LLContext);
+
+  // Crceate pass and analysis managers
+  LLFPM = std::make_unique<llvm::FunctionPassManager>();
+  LLLAM = std::make_unique<llvm::LoopAnalysisManager>();
+  LLFAM = std::make_unique<llvm::FunctionAnalysisManager>();
+  LLCGAM = std::make_unique<llvm::CGSCCAnalysisManager>();
+  LLMAM = std::make_unique<llvm::ModuleAnalysisManager>();
+  LLPIC = std::make_unique<llvm::PassInstrumentationCallbacks>();
+  LLSI = std::make_unique<llvm::StandardInstrumentations>(*LLContext, true);
+
+  LLSI->registerCallbacks(*LLPIC, LLMAM.get());
+
+  // Add transform passes
+  LLFPM->addPass(llvm::InstCombinePass());
+  LLFPM->addPass(llvm::ReassociatePass());
+  LLFPM->addPass(llvm::GVNPass());
+  LLFPM->addPass(llvm::SimplifyCFGPass());
+
+  llvm::PassBuilder pb;
+  pb.registerModuleAnalyses(*LLMAM);
+  pb.registerFunctionAnalyses(*LLFAM);
+  pb.crossRegisterProxies(*LLLAM, *LLFAM, *LLCGAM, *LLMAM);
 
   VLOG(5) << "Starting codegen";
   for (auto &fn : ast->functions) {
