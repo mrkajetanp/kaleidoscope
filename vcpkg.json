@@ -1,6 +1,6 @@
 {
   "dependencies": [
-    "matchit",
-    "easyloggingpp"
+    "easyloggingpp",
+    "matchit"
   ]
 }

@@ -1,12 +1,12 @@
 #include "ast/parser.hpp"
 #include "ast/printer.hpp"
+#include "codegen.hpp"
 #include "easylogging++.h"
 #include "lexer.hpp"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
 #include <deque>
-#include <iostream>
 #include <memory>
 #include <print>
 #include <variant>
@@ -43,6 +43,9 @@ int compile(const llvm::MemoryBuffer *buf) {
   auto ast = parser::parse(tokens);
   VLOG(1) << "*** AST ***";
   VLOG(1) << '\n' << std::format("{}", ast);
+
+  // Codegen
+  codegen::codegen(&ast);
 
   return 0;
 }

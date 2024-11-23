@@ -2,7 +2,6 @@
 #define AST_PRINTER_H_
 
 #include "ast/ast.hpp"
-#include <cstdint>
 
 #define INDENT "  "
 

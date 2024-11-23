@@ -1,6 +1,7 @@
 #ifndef AST_H_
 #define AST_H_
 
+#include "llvm/IR/IRBuilder.h"
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -12,6 +13,7 @@ class Expr {
 public:
   virtual std::string tree_format(uint32_t indent_level) = 0;
   virtual ~Expr() = default;
+  virtual llvm::Value *codegen() = 0;
 };
 
 class NumberExpr : public Expr {
@@ -19,6 +21,7 @@ class NumberExpr : public Expr {
 
 public:
   NumberExpr(double val) : val(val) {}
+  llvm::Value *codegen() override;
   std::string tree_format(uint32_t indent_level) override;
 };
 
@@ -27,6 +30,7 @@ class VariableExpr : public Expr {
 
 public:
   VariableExpr(const std::string &name) : name(name) {}
+  llvm::Value *codegen() override;
   std::string tree_format(uint32_t indent_level) override;
 };
 
@@ -48,6 +52,7 @@ public:
              std::unique_ptr<Expr> right)
       : op(op), left(std::move(left)), right(std::move(right)) {}
 
+  llvm::Value *codegen() override;
   std::string tree_format(uint32_t indent_level) override;
 };
 
@@ -58,6 +63,8 @@ class CallExpr : public Expr {
 public:
   CallExpr(const std::string &callee, std::vector<std::unique_ptr<Expr>> args)
       : callee(callee), args(std::move(args)) {}
+
+  llvm::Value *codegen() override;
   std::string tree_format(uint32_t indent_level) override;
 };
 
@@ -70,6 +77,7 @@ public:
       : name(name), args(std::move(args)) {}
 
   const std::string &getName() const { return this->name; }
+  llvm::Function *codegen();
 };
 
 class FunctionDefinition {
@@ -80,6 +88,8 @@ public:
   FunctionDefinition(std::unique_ptr<FunctionPrototype> proto,
                      std::unique_ptr<Expr> body)
       : proto(std::move(proto)), body(std::move(body)) {}
+
+  llvm::Function *codegen();
 };
 
 class CompilationUnit {
