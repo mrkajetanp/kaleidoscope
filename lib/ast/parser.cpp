@@ -15,6 +15,11 @@ static void debugPrintTokens(std::deque<Token> &tokens) {
 namespace parser {
 
 static std::unique_ptr<ast::Expr> parseExpr(std::deque<Token> &tokens);
+static std::unique_ptr<ast::IfExpr> parseIfExpr(std::deque<Token> &tokens);
+static std::unique_ptr<ast::Expr>
+parseIdentifierExpr(std::deque<Token> &tokens);
+static std::unique_ptr<ast::Expr> parseNumberExpr(std::deque<Token> &tokens);
+static std::unique_ptr<ast::Expr> parseParenExpr(std::deque<Token> &tokens);
 static std::unique_ptr<ast::FunctionDefinition>
 parseFunctionDefinition(std::deque<Token> &tokens);
 static std::unique_ptr<ast::FunctionDefinition>
@@ -23,20 +28,49 @@ static std::unique_ptr<ast::FunctionPrototype>
 parseExtern(std::deque<Token> &tokens);
 std::optional<ast::OperatorKind> tokenToBinaryOperator(Token token);
 
-ast::CompilationUnit parse(std::deque<Token> &tokens, std::string filename) {
+std::unique_ptr<ast::CompilationUnit> parse(std::deque<Token> &tokens,
+                                            std::string filename) {
   auto functions = std::vector<std::unique_ptr<ast::FunctionDefinition>>();
 
+  // TODO: handle extern here
+  std::unique_ptr<ast::FunctionDefinition> node;
   while (tokens.size() > 0) {
     auto token = tokens.front();
     switch (token.getKind()) {
     case TokenKind::Def:
-      functions.push_back(parseFunctionDefinition(tokens));
+      node = parseFunctionDefinition(tokens);
+      if (!node)
+        return nullptr;
+      functions.push_back(std::move(node));
       break;
     default:
-      functions.push_back(parseTopLevelExpr(tokens));
+      node = parseTopLevelExpr(tokens);
+      if (!node)
+        return nullptr;
+      functions.push_back(std::move(node));
     }
   }
-  return ast::CompilationUnit(filename, std::move(functions));
+  return std::make_unique<ast::CompilationUnit>(
+      ast::CompilationUnit(filename, std::move(functions)));
+}
+
+static std::unique_ptr<ast::Expr> parsePrimary(std::deque<Token> &tokens) {
+  auto token = tokens.front();
+  switch (token.getKind()) {
+  case TokenKind::If:
+    return parseIfExpr(tokens);
+  case TokenKind::Identifier:
+    return parseIdentifierExpr(tokens);
+  case TokenKind::Number:
+    return parseNumberExpr(tokens);
+  case TokenKind::ParenOpen:
+    return parseParenExpr(tokens);
+  default:
+    LOG(ERROR) << std::format(
+        "Unknown token when parsing a primary expression {}", token);
+    debugPrintTokens(tokens);
+    return nullptr;
+  }
 }
 
 static std::unique_ptr<ast::Expr> parseNumberExpr(std::deque<Token> &tokens) {
@@ -108,22 +142,6 @@ parseIdentifierExpr(std::deque<Token> &tokens) {
   return std::make_unique<ast::CallExpr>(idName, std::move(args));
 }
 
-static std::unique_ptr<ast::Expr> parsePrimary(std::deque<Token> &tokens) {
-  auto token = tokens.front();
-  switch (token.getKind()) {
-  case TokenKind::Identifier:
-    return parseIdentifierExpr(tokens);
-  case TokenKind::Number:
-    return parseNumberExpr(tokens);
-  case TokenKind::ParenOpen:
-    return parseParenExpr(tokens);
-  default:
-    LOG(ERROR) << std::format(
-        "Unknown token when parsing a primary expression {}", token);
-    return nullptr;
-  }
-}
-
 static std::unique_ptr<ast::Expr>
 parseBinOpRhs(std::deque<Token> &tokens, int precedence,
               std::unique_ptr<ast::Expr> lhs) {
@@ -165,6 +183,46 @@ static std::unique_ptr<ast::Expr> parseExpr(std::deque<Token> &tokens) {
     return nullptr;
 
   return parseBinOpRhs(tokens, 0, std::move(lhs));
+}
+
+static std::unique_ptr<ast::IfExpr> parseIfExpr(std::deque<Token> &tokens) {
+  VLOG(5) << "Parsing if expr";
+  debugPrintTokens(tokens);
+
+  // Drop the 'if'
+  tokens.pop_front();
+
+  auto Cond = parseExpr(tokens);
+  if (!Cond)
+    return nullptr;
+
+  auto token = tokens.front();
+  if (token.getKind() != TokenKind::Then) {
+    LOG(ERROR) << "Expected token 'then'";
+    return nullptr;
+  }
+  tokens.pop_front();
+
+  auto Then = parseExpr(tokens);
+  if (!Then)
+    return nullptr;
+
+  token = tokens.front();
+  if (token.getKind() != TokenKind::Else) {
+    LOG(ERROR) << "Expected token 'else'";
+    return nullptr;
+  }
+  tokens.pop_front();
+
+  auto Else = parseExpr(tokens);
+  if (!Else)
+    return nullptr;
+
+  if (tokens.front().getKind() == TokenKind::Semicolon)
+    tokens.pop_front();
+
+  return std::make_unique<ast::IfExpr>(std::move(Cond), std::move(Then),
+                                       std::move(Else));
 }
 
 static std::unique_ptr<ast::FunctionPrototype>
@@ -234,6 +292,7 @@ parseExtern(std::deque<Token> &tokens) {
   return parseFunctionPrototype(tokens);
 }
 
+// TODO: this needs its own algebraic type
 static std::unique_ptr<ast::FunctionDefinition>
 parseTopLevelExpr(std::deque<Token> &tokens) {
   if (auto expr = parseExpr(tokens)) {

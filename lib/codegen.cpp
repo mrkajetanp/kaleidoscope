@@ -93,6 +93,58 @@ llvm::Value *ast::CallExpr::codegen() {
   return LLBuilder->CreateCall(calleeF, argsVec, "calltmp");
 }
 
+llvm::Value *ast::IfExpr::codegen() {
+  llvm::Value *condV = this->Cond->codegen();
+  if (!condV)
+    return nullptr;
+
+  // condition -> bool
+  condV = LLBuilder->CreateFCmpONE(
+      condV, llvm::ConstantFP::get(*LLContext, llvm::APFloat(0.0)), "ifcond");
+
+  llvm::Function *function = LLBuilder->GetInsertBlock()->getParent();
+  // create blocks for then & else; insert 'then' at the end
+  llvm::BasicBlock *thenBB =
+      llvm::BasicBlock::Create(*LLContext, "then", function);
+  llvm::BasicBlock *elseBB = llvm::BasicBlock::Create(*LLContext, "else");
+  llvm::BasicBlock *mergeBB = llvm::BasicBlock::Create(*LLContext, "ifcont");
+
+  LLBuilder->CreateCondBr(condV, thenBB, elseBB);
+
+  // Emit then
+  LLBuilder->SetInsertPoint(thenBB);
+
+  llvm::Value *thenV = this->Then->codegen();
+  if (!thenV)
+    return nullptr;
+  LLBuilder->CreateBr(mergeBB);
+
+  // Update because codegen of 'then' can change the current block
+  thenBB = LLBuilder->GetInsertBlock();
+
+  // Emit else
+  function->insert(function->end(), elseBB);
+  LLBuilder->SetInsertPoint(elseBB);
+
+  llvm::Value *elseV = this->Else->codegen();
+  if (!elseV)
+    return nullptr;
+  LLBuilder->CreateBr(mergeBB);
+
+  // Update because codegen of 'else' can change the current block
+  elseBB = LLBuilder->GetInsertBlock();
+
+  // Emit merge block
+  function->insert(function->end(), mergeBB);
+  LLBuilder->SetInsertPoint(mergeBB);
+  llvm::PHINode *pn =
+      LLBuilder->CreatePHI(llvm::Type::getDoubleTy(*LLContext), 2, "iftmp");
+  pn->addIncoming(thenV, thenBB);
+  pn->addIncoming(elseV, elseBB);
+
+  return pn;
+}
+
 llvm::Function *ast::FunctionPrototype::codegen() {
   // Function type, e.g. double(double, double)
   std::vector<llvm::Type *> doubles(this->args.size(),
@@ -156,6 +208,9 @@ llvm::Module *ast::CompilationUnit::codegen() {
   for (auto &fn : this->functions)
     fnIRs.push_back(fn->codegen());
 
+  VLOG(5) << "*** Unoptimised codegen ***";
+  LLModule->print(llvm::outs(), nullptr);
+
   // Optimise all functions
   for (auto fnIR : fnIRs)
     LLFPM->run(*fnIR, *LLFAM);
@@ -192,12 +247,12 @@ void codegen::codegen(ast::CompilationUnit *ast) {
   pb.registerFunctionAnalyses(*LLFAM);
   pb.crossRegisterProxies(*LLLAM, *LLFAM, *LLCGAM, *LLMAM);
 
-  VLOG(5) << "Starting codegen";
+  VLOG(5) << "*** Starting codegen ***";
   llvm::Module *module = ast->codegen();
 
   // Run optimisations on the module
   LLMPM->run(*module, *LLMAM);
 
-  VLOG(5) << "Optimised codegen";
+  VLOG(5) << "*** Optimised codegen ***";
   module->print(llvm::outs(), nullptr);
 }

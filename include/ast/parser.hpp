@@ -7,7 +7,8 @@
 
 namespace parser {
 
-ast::CompilationUnit parse(std::deque<Token> &tokens, std::string filename);
+std::unique_ptr<ast::CompilationUnit> parse(std::deque<Token> &tokens,
+                                            std::string filename);
 
 }
 

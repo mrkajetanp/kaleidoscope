@@ -68,6 +68,20 @@ public:
   std::string tree_format(uint32_t indent_level) override;
 };
 
+class IfExpr : public Expr {
+  std::unique_ptr<ast::Expr> Cond;
+  std::unique_ptr<ast::Expr> Then;
+  std::unique_ptr<ast::Expr> Else;
+
+public:
+  IfExpr(std::unique_ptr<Expr> Cond, std::unique_ptr<Expr> Then,
+         std::unique_ptr<Expr> Else)
+      : Cond(std::move(Cond)), Then(std::move(Then)), Else(std::move(Else)) {}
+
+  llvm::Value *codegen() override;
+  std::string tree_format(uint32_t indent_level) override;
+};
+
 class FunctionPrototype {
 public:
   std::string name;

@@ -17,13 +17,13 @@ TokenizeResult tokenize(const llvm::MemoryBuffer *buffer) {
     if (*pos == '\0')
       break;
 
-    VLOG(5) << "startpos " << *pos;
+    // VLOG(5) << "startpos " << *pos;
 
     // Handle symbols
     std::optional<Token> symbol_token = Token::from_symbol(*pos);
     if (symbol_token.has_value()) {
       result.push_back(symbol_token.value());
-      VLOG(5) << std::format("adding {}", symbol_token.value());
+      // VLOG(5) << std::format("adding {}", symbol_token.value());
       pos++;
       continue;
     }
@@ -36,7 +36,7 @@ TokenizeResult tokenize(const llvm::MemoryBuffer *buffer) {
         identifier += *pos++;
 
       result.push_back(Token(identifier));
-      VLOG(5) << "adding " << identifier;
+      // VLOG(5) << "adding " << identifier;
       continue;
     }
 
@@ -48,7 +48,7 @@ TokenizeResult tokenize(const llvm::MemoryBuffer *buffer) {
       } while (isdigit(*pos) || *pos == '.');
       double value = std::stod(number);
       result.push_back(Token{TokenKind::Number, OptionalTokenData(value)});
-      VLOG(5) << "adding " << value << " pos " << *pos;
+      // VLOG(5) << "adding " << value << " pos " << *pos;
       continue;
     }
 
@@ -103,6 +103,8 @@ std::optional<Token> Token::from_symbol(char symbol) {
     return Token(TokenKind::Asterisk);
   case ',':
     return Token(TokenKind::Comma);
+  case ';':
+    return Token(TokenKind::Semicolon);
   default:
     return std::nullopt;
   }

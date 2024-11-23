@@ -45,3 +45,19 @@ std::string ast::VariableExpr::tree_format(uint32_t indent_level) {
     indent += INDENT;
   return std::format("{}VariableExpr: {}\n", indent, this->name);
 }
+
+std::string ast::IfExpr::tree_format(uint32_t indent_level) {
+  std::string indent = "";
+  for (int i = 0; i < indent_level; ++i)
+    indent += INDENT;
+  std::stringstream result;
+  result << indent << "IfExpr:" << '\n';
+  indent += INDENT;
+  result << indent << "Cond:" << '\n'
+         << this->Cond->tree_format(indent_level + 2);
+  result << indent << "Then:" << '\n'
+         << this->Then->tree_format(indent_level + 2);
+  result << indent << "Else:" << '\n'
+         << this->Else->tree_format(indent_level + 2);
+  return result.str();
+}

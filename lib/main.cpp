@@ -42,10 +42,10 @@ int compile(const llvm::MemoryBuffer *buf, std::string filename) {
   // Parser
   auto ast = parser::parse(tokens, filename);
   VLOG(1) << "*** AST ***";
-  VLOG(1) << '\n' << std::format("{}", ast);
+  VLOG(1) << '\n' << std::format("{}", *ast);
 
   // Codegen
-  codegen::codegen(&ast);
+  codegen::codegen(ast.get());
 
   return 0;
 }
@@ -53,7 +53,7 @@ int compile(const llvm::MemoryBuffer *buf, std::string filename) {
 int main(int argc, char *argv[]) {
   START_EASYLOGGINGPP(argc, argv);
 
-  std::string path = "samples/basic.k";
+  std::string path = "samples/control_flow.k";
   VLOG(2) << "Filepath: " << path;
   auto buffer = read_file(path);
   llvm::SourceMgr source_manager;

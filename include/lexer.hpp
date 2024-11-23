@@ -16,6 +16,7 @@ enum class TokenKind {
   Plus,
   Asterisk,
   Comma,
+  Semicolon,
   // Keywords
   Def,
   Extern,
@@ -66,6 +67,7 @@ template <> struct std::formatter<Token> {
       TOKEN_FORMAT_CASE(Plus)
       TOKEN_FORMAT_CASE(Asterisk)
       TOKEN_FORMAT_CASE(Comma)
+      TOKEN_FORMAT_CASE(Semicolon)
       TOKEN_FORMAT_CASE(Def)
       TOKEN_FORMAT_CASE(Extern)
       TOKEN_FORMAT_CASE(If)
