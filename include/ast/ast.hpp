@@ -82,6 +82,24 @@ public:
   std::string tree_format(uint32_t indent_level) override;
 };
 
+class ForExpr : public Expr {
+  std::string VarName;
+  std::unique_ptr<Expr> Start;
+  std::unique_ptr<Expr> End;
+  std::unique_ptr<Expr> Step;
+  std::unique_ptr<Expr> Body;
+
+public:
+  ForExpr(const std::string &VarName, std::unique_ptr<Expr> Start,
+          std::unique_ptr<Expr> End, std::unique_ptr<Expr> Step,
+          std::unique_ptr<Expr> Body)
+      : VarName(VarName), Start(std::move(Start)), End(std::move(End)),
+        Step(std::move(Step)), Body(std::move(Body)) {}
+
+  llvm::Value *codegen() override;
+  std::string tree_format(uint32_t indent_level) override;
+};
+
 class FunctionPrototype {
 public:
   std::string name;

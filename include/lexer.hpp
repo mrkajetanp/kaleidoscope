@@ -17,12 +17,15 @@ enum class TokenKind {
   Asterisk,
   Comma,
   Semicolon,
+  Assignment,
   // Keywords
   Def,
   Extern,
   If,
   Then,
   Else,
+  For,
+  In,
   // Primary
   Identifier,
   Number,
@@ -68,11 +71,14 @@ template <> struct std::formatter<Token> {
       TOKEN_FORMAT_CASE(Asterisk)
       TOKEN_FORMAT_CASE(Comma)
       TOKEN_FORMAT_CASE(Semicolon)
+      TOKEN_FORMAT_CASE(Assignment)
       TOKEN_FORMAT_CASE(Def)
       TOKEN_FORMAT_CASE(Extern)
       TOKEN_FORMAT_CASE(If)
       TOKEN_FORMAT_CASE(Then)
       TOKEN_FORMAT_CASE(Else)
+      TOKEN_FORMAT_CASE(For)
+      TOKEN_FORMAT_CASE(In)
     case TokenKind::Identifier:
       result = "Identifier(" + std::get<std::string>(token.data.value()) + ")";
       break;

@@ -61,3 +61,24 @@ std::string ast::IfExpr::tree_format(uint32_t indent_level) {
          << this->Else->tree_format(indent_level + 2);
   return result.str();
 }
+
+std::string ast::ForExpr::tree_format(uint32_t indent_level) {
+  std::string indent = "";
+  for (int i = 0; i < indent_level; ++i)
+    indent += INDENT;
+  std::stringstream result;
+
+  result << indent << "ForExpr:" << '\n';
+  indent += INDENT;
+  result << indent << "VarName: " << this->VarName << '\n';
+  result << indent << "Start:" << '\n'
+         << this->Start->tree_format(indent_level + 2);
+  result << indent << "End:" << '\n'
+         << this->End->tree_format(indent_level + 2);
+  result << indent << "Step:" << '\n'
+         << this->Step->tree_format(indent_level + 2);
+  result << indent << "Body:" << '\n'
+         << this->Body->tree_format(indent_level + 2);
+
+  return result.str();
+}

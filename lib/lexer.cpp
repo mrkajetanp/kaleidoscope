@@ -81,6 +81,10 @@ Token::Token(std::string str) {
     this->kind = TokenKind::Then;
   else if (str == "else")
     this->kind = TokenKind::Else;
+  else if (str == "for")
+    this->kind = TokenKind::For;
+  else if (str == "in")
+    this->kind = TokenKind::In;
   else {
     this->kind = TokenKind::Identifier;
     this->data = OptionalTokenData(str);
@@ -105,6 +109,8 @@ std::optional<Token> Token::from_symbol(char symbol) {
     return Token(TokenKind::Comma);
   case ';':
     return Token(TokenKind::Semicolon);
+  case '=':
+    return Token(TokenKind::Assignment);
   default:
     return std::nullopt;
   }

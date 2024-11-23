@@ -145,6 +145,73 @@ llvm::Value *ast::IfExpr::codegen() {
   return pn;
 }
 
+llvm::Value *ast::ForExpr::codegen() {
+  llvm::Value *startVal = this->Start->codegen();
+  if (!startVal)
+    return nullptr;
+
+  llvm::Function *function = LLBuilder->GetInsertBlock()->getParent();
+  llvm::BasicBlock *preheaderBB = LLBuilder->GetInsertBlock();
+  llvm::BasicBlock *loopBB =
+      llvm::BasicBlock::Create(*LLContext, "loop", function);
+  // Go from current block to loop block
+  LLBuilder->CreateBr(loopBB);
+
+  LLBuilder->SetInsertPoint(loopBB);
+  // PHI node with Start entry
+  llvm::PHINode *variable = LLBuilder->CreatePHI(
+      llvm::Type::getDoubleTy(*LLContext), 2, this->VarName);
+  variable->addIncoming(startVal, preheaderBB);
+
+  // Shadow existing variable under the same name but preserve
+  llvm::Value *oldVal = LLNamedValues[this->VarName];
+  LLNamedValues[this->VarName] = variable;
+
+  // Emit loop body
+  if (!this->Body->codegen())
+    return nullptr;
+
+  // Emit step
+  llvm::Value *stepVal = nullptr;
+  if (this->Step) {
+    stepVal = this->Step->codegen();
+    if (!stepVal)
+      return nullptr;
+  } else {
+    // use 1.0 as default
+    stepVal = llvm::ConstantFP::get(*LLContext, llvm::APFloat(1.0));
+  }
+
+  llvm::Value *nextVar = LLBuilder->CreateFAdd(variable, stepVal, "nextvar");
+
+  // Compute end condition
+  llvm::Value *endCond = this->End->codegen();
+  if (!endCond)
+    return nullptr;
+
+  // cond -> bool; cmp not-equal to 0
+  endCond = LLBuilder->CreateFCmpONE(
+      endCond, llvm::ConstantFP::get(*LLContext, llvm::APFloat(0.0)),
+      "loopcond");
+
+  // create the "after loop" block and insert it
+  llvm::BasicBlock *loopEndBB = LLBuilder->GetInsertBlock();
+  llvm::BasicBlock *afterBB =
+      llvm::BasicBlock::Create(*LLContext, "afterloop", function);
+  LLBuilder->CreateCondBr(endCond, loopBB, afterBB);
+  LLBuilder->SetInsertPoint(afterBB);
+
+  variable->addIncoming(nextVar, loopEndBB);
+
+  // Restore the unshadowed variable
+  if (oldVal)
+    LLNamedValues[this->VarName] = oldVal;
+  else
+    LLNamedValues.erase(this->VarName);
+
+  return llvm::Constant::getNullValue(llvm::Type::getDoubleTy(*LLContext));
+}
+
 llvm::Function *ast::FunctionPrototype::codegen() {
   // Function type, e.g. double(double, double)
   std::vector<llvm::Type *> doubles(this->args.size(),

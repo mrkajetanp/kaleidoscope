@@ -16,6 +16,7 @@ namespace parser {
 
 static std::unique_ptr<ast::Expr> parseExpr(std::deque<Token> &tokens);
 static std::unique_ptr<ast::IfExpr> parseIfExpr(std::deque<Token> &tokens);
+static std::unique_ptr<ast::ForExpr> parseForExpr(std::deque<Token> &tokens);
 static std::unique_ptr<ast::Expr>
 parseIdentifierExpr(std::deque<Token> &tokens);
 static std::unique_ptr<ast::Expr> parseNumberExpr(std::deque<Token> &tokens);
@@ -57,14 +58,16 @@ std::unique_ptr<ast::CompilationUnit> parse(std::deque<Token> &tokens,
 static std::unique_ptr<ast::Expr> parsePrimary(std::deque<Token> &tokens) {
   auto token = tokens.front();
   switch (token.getKind()) {
-  case TokenKind::If:
-    return parseIfExpr(tokens);
   case TokenKind::Identifier:
     return parseIdentifierExpr(tokens);
   case TokenKind::Number:
     return parseNumberExpr(tokens);
   case TokenKind::ParenOpen:
     return parseParenExpr(tokens);
+  case TokenKind::If:
+    return parseIfExpr(tokens);
+  case TokenKind::For:
+    return parseForExpr(tokens);
   default:
     LOG(ERROR) << std::format(
         "Unknown token when parsing a primary expression {}", token);
@@ -223,6 +226,63 @@ static std::unique_ptr<ast::IfExpr> parseIfExpr(std::deque<Token> &tokens) {
 
   return std::make_unique<ast::IfExpr>(std::move(Cond), std::move(Then),
                                        std::move(Else));
+}
+
+static std::unique_ptr<ast::ForExpr> parseForExpr(std::deque<Token> &tokens) {
+  tokens.pop_front();
+  if (tokens.front().getKind() != TokenKind::Identifier) {
+    LOG(ERROR) << "Expected identifier after for";
+    return nullptr;
+  }
+
+  std::string idName = std::get<std::string>(*tokens.front().getData());
+  tokens.pop_front();
+
+  if (tokens.front().getKind() != TokenKind::Assignment) {
+    LOG(ERROR) << "Expected '=' after for";
+    return nullptr;
+  }
+  tokens.pop_front();
+
+  auto start = parseExpr(tokens);
+  if (!start)
+    return nullptr;
+
+  if (tokens.front().getKind() != TokenKind::Comma) {
+    LOG(ERROR) << "Expected ',' after for start value";
+    return nullptr;
+  }
+  tokens.pop_front();
+
+  auto end = parseExpr(tokens);
+  if (!end)
+    return nullptr;
+
+  // Optional step value
+  std::unique_ptr<ast::Expr> step;
+  if (tokens.front().getKind() == TokenKind::Comma) {
+    tokens.pop_front();
+    step = parseExpr(tokens);
+    if (!step)
+      return nullptr;
+  }
+
+  if (tokens.front().getKind() != TokenKind::In) {
+    LOG(ERROR) << "Expected 'in' after for";
+    return nullptr;
+  }
+  tokens.pop_front();
+
+  auto body = parseExpr(tokens);
+  if (!body)
+    return nullptr;
+
+  if (tokens.front().getKind() == TokenKind::Semicolon)
+    tokens.pop_front();
+
+  return std::make_unique<ast::ForExpr>(idName, std::move(start),
+                                        std::move(end), std::move(step),
+                                        std::move(body));
 }
 
 static std::unique_ptr<ast::FunctionPrototype>
