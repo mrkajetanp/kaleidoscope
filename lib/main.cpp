@@ -3,6 +3,7 @@
 #include "codegen.hpp"
 #include "easylogging++.h"
 #include "lexer.hpp"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
@@ -12,6 +13,15 @@
 #include <variant>
 
 INITIALIZE_EASYLOGGINGPP
+
+llvm::cl::opt<std::string> InputFilename(llvm::cl::Positional,
+                                         llvm::cl::desc("<input file>"),
+                                         llvm::cl::Required);
+llvm::cl::opt<std::string>
+    OutputFilename("o", llvm::cl::desc("Specify output filename"),
+                   llvm::cl::value_desc("filename"));
+llvm::cl::opt<bool> Debug("debug", llvm::cl::desc("Debug"));
+llvm::cl::opt<bool> Verbose("v", llvm::cl::desc("Verbose"));
 
 std::unique_ptr<llvm::MemoryBuffer> read_file(std::string filepath) {
   using FileOrError = llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>;
@@ -51,13 +61,12 @@ int compile(const llvm::MemoryBuffer *buf, std::string filename) {
 }
 
 int main(int argc, char *argv[]) {
+  llvm::cl::ParseCommandLineOptions(argc, argv);
   START_EASYLOGGINGPP(argc, argv);
 
-  std::string path = "samples/control_flow.k";
-  VLOG(2) << "Filepath: " << path;
-  auto buffer = read_file(path);
+  auto buffer = read_file(InputFilename);
   llvm::SourceMgr source_manager;
   auto id = source_manager.AddNewSourceBuffer(std::move(buffer), llvm::SMLoc());
   const llvm::MemoryBuffer *buf = source_manager.getMemoryBuffer(id);
-  return compile(buf, path);
+  return compile(buf, InputFilename);
 }
