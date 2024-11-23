@@ -94,11 +94,15 @@ public:
 
 class CompilationUnit {
 public:
+  std::string name;
   std::vector<std::unique_ptr<ast::FunctionDefinition>> functions;
 
   CompilationUnit(
+      std::string name,
       std::vector<std::unique_ptr<ast::FunctionDefinition>> functions)
-      : functions(std::move(functions)) {}
+      : name(name), functions(std::move(functions)) {}
+
+  llvm::Module *codegen();
 };
 
 } // namespace ast

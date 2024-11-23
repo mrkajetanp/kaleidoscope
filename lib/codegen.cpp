@@ -19,6 +19,7 @@
 #include <map>
 #include <memory>
 
+// TODO: fold those into a context struct
 static std::unique_ptr<llvm::LLVMContext> LLContext;
 static std::unique_ptr<llvm::IRBuilder<>> LLBuilder;
 static std::unique_ptr<llvm::Module> LLModule;
@@ -29,6 +30,7 @@ static std::unique_ptr<llvm::LoopAnalysisManager> LLLAM;
 static std::unique_ptr<llvm::FunctionAnalysisManager> LLFAM;
 static std::unique_ptr<llvm::CGSCCAnalysisManager> LLCGAM;
 static std::unique_ptr<llvm::ModuleAnalysisManager> LLMAM;
+static std::unique_ptr<llvm::ModulePassManager> LLMPM;
 static std::unique_ptr<llvm::PassInstrumentationCallbacks> LLPIC;
 static std::unique_ptr<llvm::StandardInstrumentations> LLSI;
 
@@ -140,9 +142,6 @@ llvm::Function *ast::FunctionDefinition::codegen() {
     // Validate generated code
     llvm::verifyFunction(*function);
 
-    // Optimise
-    LLFPM->run(*function, *LLFAM);
-
     return function;
   }
 
@@ -151,10 +150,23 @@ llvm::Function *ast::FunctionDefinition::codegen() {
   return nullptr;
 }
 
+llvm::Module *ast::CompilationUnit::codegen() {
+  std::vector<llvm::Function *> fnIRs;
+  // Codegen all functions
+  for (auto &fn : this->functions)
+    fnIRs.push_back(fn->codegen());
+
+  // Optimise all functions
+  for (auto fnIR : fnIRs)
+    LLFPM->run(*fnIR, *LLFAM);
+
+  return &*LLModule;
+}
+
 void codegen::codegen(ast::CompilationUnit *ast) {
   // Initialise module
   LLContext = std::make_unique<llvm::LLVMContext>();
-  LLModule = std::make_unique<llvm::Module>("kaleidoscope-module", *LLContext);
+  LLModule = std::make_unique<llvm::Module>(ast->name, *LLContext);
   LLBuilder = std::make_unique<llvm::IRBuilder<>>(*LLContext);
 
   // Crceate pass and analysis managers
@@ -163,12 +175,13 @@ void codegen::codegen(ast::CompilationUnit *ast) {
   LLFAM = std::make_unique<llvm::FunctionAnalysisManager>();
   LLCGAM = std::make_unique<llvm::CGSCCAnalysisManager>();
   LLMAM = std::make_unique<llvm::ModuleAnalysisManager>();
+  LLMPM = std::make_unique<llvm::ModulePassManager>();
   LLPIC = std::make_unique<llvm::PassInstrumentationCallbacks>();
   LLSI = std::make_unique<llvm::StandardInstrumentations>(*LLContext, true);
 
   LLSI->registerCallbacks(*LLPIC, LLMAM.get());
 
-  // Add transform passes
+  // Add function transform passes
   LLFPM->addPass(llvm::InstCombinePass());
   LLFPM->addPass(llvm::ReassociatePass());
   LLFPM->addPass(llvm::GVNPass());
@@ -180,10 +193,11 @@ void codegen::codegen(ast::CompilationUnit *ast) {
   pb.crossRegisterProxies(*LLLAM, *LLFAM, *LLCGAM, *LLMAM);
 
   VLOG(5) << "Starting codegen";
-  for (auto &fn : ast->functions) {
-    if (auto *fnIR = fn->codegen()) {
-      fnIR->print(llvm::outs());
-      llvm::outs() << "\n";
-    }
-  }
+  llvm::Module *module = ast->codegen();
+
+  // Run optimisations on the module
+  LLMPM->run(*module, *LLMAM);
+
+  VLOG(5) << "Optimised codegen";
+  module->print(llvm::outs(), nullptr);
 }

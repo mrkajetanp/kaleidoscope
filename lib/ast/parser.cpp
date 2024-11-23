@@ -23,7 +23,7 @@ static std::unique_ptr<ast::FunctionPrototype>
 parseExtern(std::deque<Token> &tokens);
 std::optional<ast::OperatorKind> tokenToBinaryOperator(Token token);
 
-ast::CompilationUnit parse(std::deque<Token> &tokens) {
+ast::CompilationUnit parse(std::deque<Token> &tokens, std::string filename) {
   auto functions = std::vector<std::unique_ptr<ast::FunctionDefinition>>();
 
   while (tokens.size() > 0) {
@@ -36,7 +36,7 @@ ast::CompilationUnit parse(std::deque<Token> &tokens) {
       functions.push_back(parseTopLevelExpr(tokens));
     }
   }
-  return ast::CompilationUnit(std::move(functions));
+  return ast::CompilationUnit(filename, std::move(functions));
 }
 
 static std::unique_ptr<ast::Expr> parseNumberExpr(std::deque<Token> &tokens) {

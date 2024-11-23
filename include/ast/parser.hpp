@@ -7,7 +7,7 @@
 
 namespace parser {
 
-ast::CompilationUnit parse(std::deque<Token> &tokens);
+ast::CompilationUnit parse(std::deque<Token> &tokens, std::string filename);
 
 }
 

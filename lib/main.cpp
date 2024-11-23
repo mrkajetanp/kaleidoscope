@@ -19,7 +19,7 @@ std::unique_ptr<llvm::MemoryBuffer> read_file(std::string filepath) {
   return std::move(result.get());
 }
 
-int compile(const llvm::MemoryBuffer *buf) {
+int compile(const llvm::MemoryBuffer *buf, std::string filename) {
   // Lexer
   VLOG(1) << "*** Source ***";
   VLOG(1) << '\n' << buf->getBuffer().str();
@@ -40,7 +40,7 @@ int compile(const llvm::MemoryBuffer *buf) {
   }
 
   // Parser
-  auto ast = parser::parse(tokens);
+  auto ast = parser::parse(tokens, filename);
   VLOG(1) << "*** AST ***";
   VLOG(1) << '\n' << std::format("{}", ast);
 
@@ -59,5 +59,5 @@ int main(int argc, char *argv[]) {
   llvm::SourceMgr source_manager;
   auto id = source_manager.AddNewSourceBuffer(std::move(buffer), llvm::SMLoc());
   const llvm::MemoryBuffer *buf = source_manager.getMemoryBuffer(id);
-  return compile(buf);
+  return compile(buf, path);
 }
