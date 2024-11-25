@@ -1,7 +1,7 @@
 #ifndef AST_H_
 #define AST_H_
 
-#include "llvm/IR/IRBuilder.h"
+#include "codegen.hpp"
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -13,7 +13,7 @@ class Expr {
 public:
   virtual std::string tree_format(uint32_t indent_level) = 0;
   virtual ~Expr() = default;
-  virtual llvm::Value *codegen() = 0;
+  virtual llvm::Value *codegen(codegen::LLVMCodegenCtx *llctx) = 0;
 };
 
 class NumberExpr : public Expr {
@@ -21,7 +21,7 @@ class NumberExpr : public Expr {
 
 public:
   NumberExpr(double val) : val(val) {}
-  llvm::Value *codegen() override;
+  llvm::Value *codegen(codegen::LLVMCodegenCtx *llctx) override;
   std::string tree_format(uint32_t indent_level) override;
 };
 
@@ -30,7 +30,7 @@ class VariableExpr : public Expr {
 
 public:
   VariableExpr(const std::string &name) : name(name) {}
-  llvm::Value *codegen() override;
+  llvm::Value *codegen(codegen::LLVMCodegenCtx *llctx) override;
   std::string tree_format(uint32_t indent_level) override;
 };
 
@@ -52,7 +52,7 @@ public:
              std::unique_ptr<Expr> right)
       : op(op), left(std::move(left)), right(std::move(right)) {}
 
-  llvm::Value *codegen() override;
+  llvm::Value *codegen(codegen::LLVMCodegenCtx *llctx) override;
   std::string tree_format(uint32_t indent_level) override;
 };
 
@@ -64,7 +64,7 @@ public:
   CallExpr(const std::string &callee, std::vector<std::unique_ptr<Expr>> args)
       : callee(callee), args(std::move(args)) {}
 
-  llvm::Value *codegen() override;
+  llvm::Value *codegen(codegen::LLVMCodegenCtx *llctx) override;
   std::string tree_format(uint32_t indent_level) override;
 };
 
@@ -78,7 +78,7 @@ public:
          std::unique_ptr<Expr> Else)
       : Cond(std::move(Cond)), Then(std::move(Then)), Else(std::move(Else)) {}
 
-  llvm::Value *codegen() override;
+  llvm::Value *codegen(codegen::LLVMCodegenCtx *llctx) override;
   std::string tree_format(uint32_t indent_level) override;
 };
 
@@ -96,7 +96,7 @@ public:
       : VarName(VarName), Start(std::move(Start)), End(std::move(End)),
         Step(std::move(Step)), Body(std::move(Body)) {}
 
-  llvm::Value *codegen() override;
+  llvm::Value *codegen(codegen::LLVMCodegenCtx *llctx) override;
   std::string tree_format(uint32_t indent_level) override;
 };
 
@@ -109,7 +109,7 @@ public:
       : name(name), args(std::move(args)) {}
 
   const std::string &getName() const { return this->name; }
-  llvm::Function *codegen();
+  llvm::Function *codegen(codegen::LLVMCodegenCtx *llctx);
 };
 
 class FunctionDefinition {
@@ -121,7 +121,7 @@ public:
                      std::unique_ptr<Expr> body)
       : proto(std::move(proto)), body(std::move(body)) {}
 
-  llvm::Function *codegen();
+  llvm::Function *codegen(codegen::LLVMCodegenCtx *llctx);
 };
 
 class CompilationUnit {
@@ -134,7 +134,7 @@ public:
       std::vector<std::unique_ptr<ast::FunctionDefinition>> functions)
       : name(name), functions(std::move(functions)) {}
 
-  llvm::Module *codegen();
+  llvm::Module *codegen(codegen::LLVMCodegenCtx *llctx);
 };
 
 } // namespace ast
