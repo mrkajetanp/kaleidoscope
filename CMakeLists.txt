@@ -27,7 +27,6 @@ add_definitions(${LLVM_DEFINITIONS_LIST})
 # Libraries
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(easyloggingpp easyloggingpp REQUIRED IMPORTED_TARGET)
 
 # Executable setup
 
@@ -37,4 +36,3 @@ target_compile_features(${TARGET_NAME} PUBLIC cxx_std_23)
 
 target_link_libraries(${TARGET_NAME} PUBLIC ${llvm_libs})
 target_link_libraries(${TARGET_NAME} PUBLIC LLVM-19)
-target_link_libraries(${TARGET_NAME} PRIVATE PkgConfig::easyloggingpp)

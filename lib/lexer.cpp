@@ -1,5 +1,5 @@
 #include "lexer.hpp"
-#include "easylogging++.h"
+#include "logger.hpp"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cctype>
 #include <print>
@@ -17,13 +17,13 @@ TokenizeResult tokenize(const llvm::MemoryBuffer *buffer) {
     if (*pos == '\0')
       break;
 
-    // VLOG(5) << "startpos " << *pos;
+    TRACE("startpos " << *pos);
 
     // Handle symbols
     std::optional<Token> symbol_token = Token::from_symbol(*pos);
     if (symbol_token.has_value()) {
       result.push_back(symbol_token.value());
-      // VLOG(5) << std::format("adding {}", symbol_token.value());
+      TRACE(std::format("adding {}", symbol_token.value()));
       pos++;
       continue;
     }
@@ -36,7 +36,7 @@ TokenizeResult tokenize(const llvm::MemoryBuffer *buffer) {
         identifier += *pos++;
 
       result.push_back(Token(identifier));
-      // VLOG(5) << "adding " << identifier;
+      TRACE("adding " << identifier);
       continue;
     }
 
@@ -48,7 +48,7 @@ TokenizeResult tokenize(const llvm::MemoryBuffer *buffer) {
       } while (isdigit(*pos) || *pos == '.');
       double value = std::stod(number);
       result.push_back(Token{TokenKind::Number, OptionalTokenData(value)});
-      // VLOG(5) << "adding " << value << " pos " << *pos;
+      TRACE("adding " << value << " pos " << *pos);
       continue;
     }
 

@@ -1,26 +1,27 @@
 #include "ast/parser.hpp"
 #include "ast/ast.hpp"
-#include "easylogging++.h"
 #include "lexer.hpp"
+#include "logger.hpp"
 #include <memory>
 #include <print>
+#include <sstream>
 
-static void debugPrintTokens(std::deque<Token> &tokens) {
+static void tracePrintTokens(std::deque<Token> &tokens) {
   std::stringstream ss;
   for (int i = 0; i < 5 && i < tokens.size(); ++i)
     ss << std::format("{} ", tokens[i]);
-  VLOG(5) << ss.str();
+  TRACE(ss.str());
 }
 
 namespace parser {
 
 static std::unique_ptr<ast::Expr> parseExpr(std::deque<Token> &tokens);
-static std::unique_ptr<ast::IfExpr> parseIfExpr(std::deque<Token> &tokens);
-static std::unique_ptr<ast::ForExpr> parseForExpr(std::deque<Token> &tokens);
 static std::unique_ptr<ast::Expr>
 parseIdentifierExpr(std::deque<Token> &tokens);
 static std::unique_ptr<ast::Expr> parseNumberExpr(std::deque<Token> &tokens);
 static std::unique_ptr<ast::Expr> parseParenExpr(std::deque<Token> &tokens);
+static std::unique_ptr<ast::IfExpr> parseIfExpr(std::deque<Token> &tokens);
+static std::unique_ptr<ast::ForExpr> parseForExpr(std::deque<Token> &tokens);
 static std::unique_ptr<ast::FunctionDefinition>
 parseFunctionDefinition(std::deque<Token> &tokens);
 static std::unique_ptr<ast::FunctionDefinition>
@@ -69,9 +70,9 @@ static std::unique_ptr<ast::Expr> parsePrimary(std::deque<Token> &tokens) {
   case TokenKind::For:
     return parseForExpr(tokens);
   default:
-    LOG(ERROR) << std::format(
-        "Unknown token when parsing a primary expression {}", token);
-    debugPrintTokens(tokens);
+    ERROR(std::format("Unknown token when parsing a primary expression {}",
+                      token));
+    tracePrintTokens(tokens);
     return nullptr;
   }
 }
@@ -85,7 +86,7 @@ static std::unique_ptr<ast::Expr> parseNumberExpr(std::deque<Token> &tokens) {
 }
 
 static std::unique_ptr<ast::Expr> parseParenExpr(std::deque<Token> &tokens) {
-  VLOG(5) << "Parsing paren expr";
+  TRACE("Parsing paren expr");
   tokens.pop_front();
   auto val = parseExpr(tokens);
   if (!val)
@@ -93,7 +94,7 @@ static std::unique_ptr<ast::Expr> parseParenExpr(std::deque<Token> &tokens) {
 
   auto token = tokens.front();
   if (token.getKind() != TokenKind::ParenClose) {
-    LOG(ERROR) << "Expected ')'";
+    ERROR("Expected ')'");
     return nullptr;
   }
   tokens.pop_front();
@@ -113,7 +114,7 @@ parseIdentifierExpr(std::deque<Token> &tokens) {
 
   // Function call
   tokens.pop_front();
-  VLOG(5) << "parsing function call here";
+  TRACE("Parsing function call");
   token = tokens.front();
   std::vector<std::unique_ptr<ast::Expr>> args;
   if (token.getKind() != TokenKind::ParenClose) {
@@ -123,15 +124,15 @@ parseIdentifierExpr(std::deque<Token> &tokens) {
       else
         return nullptr;
 
-      VLOG(5) << "pushed " << args.size() << " args";
-      debugPrintTokens(tokens);
+      TRACE("pushed " << args.size() << " args");
+      tracePrintTokens(tokens);
 
       token = tokens.front();
       if (token.getKind() == TokenKind::ParenClose)
         break;
 
       if (token.getKind() != TokenKind::Comma) {
-        LOG(ERROR) << "Expected ')' or ',' in argument list";
+        ERROR("Expected ')' or ',' in argument list");
         return nullptr;
       }
 
@@ -169,7 +170,7 @@ parseBinOpRhs(std::deque<Token> &tokens, int precedence,
 
     auto binop = tokenToBinaryOperator(op);
     if (!binop.has_value()) {
-      LOG(ERROR) << std::format("Invalid binary operator {}", token);
+      ERROR(std::format("Invalid binary operator {}", token));
       return nullptr;
     }
     // merge lhs & rhs
@@ -179,8 +180,8 @@ parseBinOpRhs(std::deque<Token> &tokens, int precedence,
 }
 
 static std::unique_ptr<ast::Expr> parseExpr(std::deque<Token> &tokens) {
-  VLOG(5) << "parsing expr";
-  debugPrintTokens(tokens);
+  TRACE("Parsing Expr");
+  tracePrintTokens(tokens);
   auto lhs = parsePrimary(tokens);
   if (!lhs)
     return nullptr;
@@ -189,8 +190,8 @@ static std::unique_ptr<ast::Expr> parseExpr(std::deque<Token> &tokens) {
 }
 
 static std::unique_ptr<ast::IfExpr> parseIfExpr(std::deque<Token> &tokens) {
-  VLOG(5) << "Parsing if expr";
-  debugPrintTokens(tokens);
+  TRACE("Parsing IfExpr");
+  tracePrintTokens(tokens);
 
   // Drop the 'if'
   tokens.pop_front();
@@ -201,7 +202,7 @@ static std::unique_ptr<ast::IfExpr> parseIfExpr(std::deque<Token> &tokens) {
 
   auto token = tokens.front();
   if (token.getKind() != TokenKind::Then) {
-    LOG(ERROR) << "Expected token 'then'";
+    ERROR("Expected token 'then'");
     return nullptr;
   }
   tokens.pop_front();
@@ -212,7 +213,7 @@ static std::unique_ptr<ast::IfExpr> parseIfExpr(std::deque<Token> &tokens) {
 
   token = tokens.front();
   if (token.getKind() != TokenKind::Else) {
-    LOG(ERROR) << "Expected token 'else'";
+    ERROR("Expected token 'else'");
     return nullptr;
   }
   tokens.pop_front();
@@ -231,7 +232,7 @@ static std::unique_ptr<ast::IfExpr> parseIfExpr(std::deque<Token> &tokens) {
 static std::unique_ptr<ast::ForExpr> parseForExpr(std::deque<Token> &tokens) {
   tokens.pop_front();
   if (tokens.front().getKind() != TokenKind::Identifier) {
-    LOG(ERROR) << "Expected identifier after for";
+    ERROR("Expected identifier after for");
     return nullptr;
   }
 
@@ -239,7 +240,7 @@ static std::unique_ptr<ast::ForExpr> parseForExpr(std::deque<Token> &tokens) {
   tokens.pop_front();
 
   if (tokens.front().getKind() != TokenKind::Assignment) {
-    LOG(ERROR) << "Expected '=' after for";
+    ERROR("Expected '=' after for");
     return nullptr;
   }
   tokens.pop_front();
@@ -249,7 +250,7 @@ static std::unique_ptr<ast::ForExpr> parseForExpr(std::deque<Token> &tokens) {
     return nullptr;
 
   if (tokens.front().getKind() != TokenKind::Comma) {
-    LOG(ERROR) << "Expected ',' after for start value";
+    ERROR("Expected ',' after for start value");
     return nullptr;
   }
   tokens.pop_front();
@@ -268,7 +269,7 @@ static std::unique_ptr<ast::ForExpr> parseForExpr(std::deque<Token> &tokens) {
   }
 
   if (tokens.front().getKind() != TokenKind::In) {
-    LOG(ERROR) << "Expected 'in' after for";
+    ERROR("Expected 'in' after for");
     return nullptr;
   }
   tokens.pop_front();
@@ -287,11 +288,11 @@ static std::unique_ptr<ast::ForExpr> parseForExpr(std::deque<Token> &tokens) {
 
 static std::unique_ptr<ast::FunctionPrototype>
 parseFunctionPrototype(std::deque<Token> &tokens) {
-  VLOG(5) << "Parsing function proto";
-  debugPrintTokens(tokens);
+  TRACE("Parsing FunctionPrototype");
+  tracePrintTokens(tokens);
   auto token = tokens.front();
   if (token.getKind() != TokenKind::Identifier) {
-    LOG(ERROR) << "Expected function name in prototype";
+    ERROR("Expected function name in prototype");
     return nullptr;
   }
 
@@ -300,7 +301,7 @@ parseFunctionPrototype(std::deque<Token> &tokens) {
   token = tokens.front();
 
   if (token.getKind() != TokenKind::ParenOpen) {
-    LOG(ERROR) << "Expected '(' in prototype";
+    ERROR("Expected '(' in prototype");
     return nullptr;
   }
 
@@ -317,13 +318,13 @@ parseFunctionPrototype(std::deque<Token> &tokens) {
   }
 
   if (token.getKind() != TokenKind::ParenClose) {
-    LOG(ERROR) << "Expected ')' in prototype";
+    ERROR("Expected ')' in prototype");
     return nullptr;
   }
 
   tokens.pop_front();
 
-  VLOG(5) << std::format("got {} args for {}", argNames.size(), functionName);
+  TRACE(std::format("Got {} args for {}", argNames.size(), functionName));
 
   return std::make_unique<ast::FunctionPrototype>(functionName,
                                                   std::move(argNames));
@@ -331,15 +332,15 @@ parseFunctionPrototype(std::deque<Token> &tokens) {
 
 static std::unique_ptr<ast::FunctionDefinition>
 parseFunctionDefinition(std::deque<Token> &tokens) {
-  VLOG(5) << "Parsing function def";
-  debugPrintTokens(tokens);
+  TRACE("Parsing FunctionDefinition");
+  tracePrintTokens(tokens);
   // Consume 'def'
   tokens.pop_front();
   auto proto = parseFunctionPrototype(tokens);
   if (!proto)
     return nullptr;
 
-  VLOG(5) << "parsing function body";
+  TRACE("Parsing Function body");
   if (auto expr = parseExpr(tokens))
     return std::make_unique<ast::FunctionDefinition>(std::move(proto),
                                                      std::move(expr));
@@ -379,7 +380,7 @@ std::optional<ast::OperatorKind> tokenToBinaryOperator(Token token) {
     TOKEN_BINOP_CASE(Asterisk)
     TOKEN_BINOP_CASE(LessThan)
   default:
-    LOG(ERROR) << std::format("Invalid binary operator {}", token);
+    ERROR(std::format("Invalid binary operator {}", token));
     return {};
   }
 }

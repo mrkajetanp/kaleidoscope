@@ -1,6 +1,6 @@
 #include "codegen.hpp"
 #include "ast/ast.hpp"
-#include "easylogging++.h"
+#include "logger.hpp"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
@@ -41,7 +41,7 @@ llvm::Value *ast::NumberExpr::codegen() {
 llvm::Value *ast::VariableExpr::codegen() {
   llvm::Value *v = LLNamedValues[this->name];
   if (!v)
-    LOG(ERROR) << "Unknown variable name: " << this->name;
+    ERROR("Unknown variable name: " << this->name);
   return v;
 }
 
@@ -65,7 +65,7 @@ llvm::Value *ast::BinaryExpr::codegen() {
     return LLBuilder->CreateUIToFP(l, llvm::Type::getDoubleTy(*LLContext),
                                    "booltmp");
   default:
-    LOG(ERROR) << "Invalid binary operator";
+    ERROR("Invalid binary operator");
     return nullptr;
   }
 }
@@ -73,13 +73,13 @@ llvm::Value *ast::BinaryExpr::codegen() {
 llvm::Value *ast::CallExpr::codegen() {
   llvm::Function *calleeF = LLModule->getFunction(this->callee);
   if (!calleeF) {
-    LOG(ERROR) << "Referenced unknown function: " << this->callee;
+    ERROR("Referenced unknown function: " << this->callee);
     return nullptr;
   }
 
   // Argument mismatch error
   if (calleeF->arg_size() != this->args.size()) {
-    LOG(ERROR) << "Incorrect number of arguments passed";
+    ERROR("Incorrect number of arguments passed");
     return nullptr;
   }
 
@@ -240,8 +240,7 @@ llvm::Function *ast::FunctionDefinition::codegen() {
     return nullptr;
 
   if (!function->empty()) {
-    LOG(ERROR) << "Function " << this->proto->getName()
-               << " cannot be redefined.";
+    ERROR("Function " << this->proto->getName() << " cannot be redefined.");
     return nullptr;
   }
 
@@ -275,8 +274,9 @@ llvm::Module *ast::CompilationUnit::codegen() {
   for (auto &fn : this->functions)
     fnIRs.push_back(fn->codegen());
 
-  VLOG(5) << "*** Unoptimised codegen ***";
-  LLModule->print(llvm::outs(), nullptr);
+  DEBUG("*** Unoptimised codegen ***");
+  if (LoggingLevel == log::debug)
+    LLModule->print(llvm::outs(), nullptr);
 
   // Optimise all functions
   for (auto fnIR : fnIRs)
@@ -314,12 +314,13 @@ void codegen::codegen(ast::CompilationUnit *ast) {
   pb.registerFunctionAnalyses(*LLFAM);
   pb.crossRegisterProxies(*LLLAM, *LLFAM, *LLCGAM, *LLMAM);
 
-  VLOG(5) << "*** Starting codegen ***";
+  DEBUG("*** Starting codegen ***");
   llvm::Module *module = ast->codegen();
 
   // Run optimisations on the module
   LLMPM->run(*module, *LLMAM);
 
-  VLOG(5) << "*** Optimised codegen ***";
-  module->print(llvm::outs(), nullptr);
+  DEBUG("*** Optimised codegen ***");
+  if (LoggingLevel == log::debug)
+    module->print(llvm::outs(), nullptr);
 }
